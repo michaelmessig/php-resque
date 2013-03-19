@@ -96,31 +96,42 @@ class Resque_Redis
 		$this->server = $server;
 		$this->database = $database;
 
+		$this->establishConnection();
+	}
+
+	public function establishConnection()
+	{
+		if(!isset($this->server)) {
+			throw new \Resque_Exception(
+				'Server details not provided for connect()'
+			);
+		}
+
 		if (is_array($this->server)) {
 			$this->driver = new Credis_Cluster($server);
 		}
 		else {
 			$port = null;
 			$password = null;
-			$host = $server;
+			$host = $this->server;
 
 			// If not a UNIX socket path or tcp:// formatted connections string
 			// assume host:port combination.
-			if (strpos($server, '/') === false) {
-				$parts = explode(':', $server);
+			if (strpos($this->server, '/') === false) {
+				$parts = explode(':', $this->server);
 				if (isset($parts[1])) {
 					$port = $parts[1];
 				}
 				$host = $parts[0];
-			}else if (strpos($server, 'redis://') !== false){
+			}else if (strpos($this->server, 'redis://') !== false){
 				// Redis format is:
 				// redis://[user]:[password]@[host]:[port]
-				list($userpwd,$hostport) = explode('@', $server);
+				list($userpwd,$hostport) = explode('@', $this->server);
 				$userpwd = substr($userpwd, strpos($userpwd, 'redis://')+8);
 				list($host, $port) = explode(':', $hostport);
 				list($user, $password) = explode(':', $userpwd);
 			}
-			
+
 			$this->driver = new Credis_Client($host, $port);
 			if (isset($password)){
 				$this->driver->auth($password);
@@ -128,7 +139,7 @@ class Resque_Redis
 		}
 
 		if ($this->database !== null) {
-			$this->driver->select($database);
+			$this->driver->select($this->database);
 		}
 	}
 
